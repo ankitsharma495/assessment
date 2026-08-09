@@ -17,6 +17,7 @@ interface DashboardProps {
   user: User | null;
   orders: Order[];
   currentFilter: OrderStatus | "ALL";
+
   onFilterChange: (status: OrderStatus | "ALL") => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
