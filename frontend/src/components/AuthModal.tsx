@@ -20,7 +20,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"user" | "admin">("user");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +40,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onSuccess(res.data.user, res.data.token);
         onClose();
       } else {
-        const res = await authAPI.signup({ name, email, password, role });
+        const res = await authAPI.signup({ name, email, password });
         onSuccess(res.data.user, res.data.token);
         onClose();
       }
@@ -73,7 +72,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {isLoginMode ? "Sign In to CrossVal" : "Create CrossVal Account"}
             </h2>
             <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "2px" }}>
-              {isLoginMode ? "Enter your merchant or admin credentials" : "Select role and register your account"}
+              {isLoginMode ? "Enter your merchant or admin credentials" : "Enter your details to register your merchant account"}
             </p>
           </div>
           <button
@@ -110,74 +109,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {!isLoginMode && (
-            <>
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: "0.78rem", fontWeight: "500", color: "#64748b" }}>
-                  Full Name
-                </label>
-                <div style={{ position: "relative" }}>
-                  <UserIcon
-                    size={16}
-                    style={{ position: "absolute", left: "12px", top: "10px", color: "var(--text-dim)" }}
-                  />
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    style={{ paddingLeft: "36px", fontSize: "0.85rem" }}
-                    required
-                  />
-                </div>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: "0.78rem", fontWeight: "500", color: "#64748b" }}>
+                Full Name
+              </label>
+              <div style={{ position: "relative" }}>
+                <UserIcon
+                  size={16}
+                  style={{ position: "absolute", left: "12px", top: "10px", color: "var(--text-dim)" }}
+                />
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  style={{ paddingLeft: "36px", fontSize: "0.85rem" }}
+                  required
+                />
               </div>
-
-              {/* Role Selection Radio Cards */}
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: "0.78rem", fontWeight: "500", color: "#64748b" }}>
-                  Account Role
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <div
-                    onClick={() => setRole("user")}
-                    style={{
-                      border: role === "user" ? "2px solid var(--primary-purple)" : "1px solid var(--border-color)",
-                      background: role === "user" ? "#f3e8ff" : "#ffffff",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "2px",
-                    }}
-                  >
-                    <span style={{ fontSize: "0.825rem", fontWeight: "600", color: role === "user" ? "var(--primary-purple)" : "#1e293b" }}>
-                      Merchant User
-                    </span>
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Own Orders Only</span>
-                  </div>
-
-                  <div
-                    onClick={() => setRole("admin")}
-                    style={{
-                      border: role === "admin" ? "2px solid #7c3aed" : "1px solid var(--border-color)",
-                      background: role === "admin" ? "#f3e8ff" : "#ffffff",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "2px",
-                    }}
-                  >
-                    <span style={{ fontSize: "0.825rem", fontWeight: "600", color: role === "admin" ? "#7c3aed" : "#1e293b", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <ShieldCheck size={14} /> Admin
-                    </span>
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Global Orders Access</span>
-                  </div>
-                </div>
-              </div>
-            </>
+            </div>
           )}
 
           <div className="form-group">

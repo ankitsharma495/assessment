@@ -166,50 +166,15 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
       order: [["createdAt", "DESC"]],
     });
 
-    // Fast in-memory status & financial totals calculation (0ms delay)
-    const today = new Date().toISOString().split("T")[0];
-    const updatedOrders = orders.map((ord) => {
-      const ordJson = ord.toJSON() as any;
-      const subtotal = (ordJson.items || []).reduce(
-        (acc: number, item: any) => acc + item.quantity * item.unitPrice,
-        0
-      );
-
-      let additionalTotal = 0;
-      (ordJson.additionalCharges || []).forEach((ch: any) => {
-        const val = ch.chargeType === "percentage" ? (subtotal * ch.value) / 100 : ch.value;
-        if (ch.isDeduction) additionalTotal -= val;
-        else additionalTotal += val;
-      });
-
-      const totalAmount = Math.max(0, Number((subtotal + additionalTotal).toFixed(2)));
-      const totalPaid = Number(
-        (ordJson.payments || []).reduce((acc: number, p: any) => acc + Number(p.amount), 0).toFixed(2)
-      );
-      const totalCreditNotes = Number(
-        (ordJson.creditNotes || []).reduce((acc: number, cn: any) => acc + Number(cn.amount), 0).toFixed(2)
-      );
-
-      const effectivePaid = totalPaid + totalCreditNotes;
-      const balanceDue = Math.max(0, Number((totalAmount - effectivePaid).toFixed(2)));
-
-      let computedStatus = "pending";
-      if (effectivePaid >= totalAmount && totalAmount > 0) {
-        computedStatus = "paid";
-      } else if (effectivePaid > 0) {
-        computedStatus = "partially_paid";
-      } else if (ordJson.dueDate < today) {
-        computedStatus = "overdue";
-      }
-
-      ordJson.subtotal = subtotal;
-      ordJson.totalAmount = totalAmount;
-      ordJson.totalPaid = totalPaid;
-      ordJson.totalCreditNotes = totalCreditNotes;
-      ordJson.balanceDue = balanceDue;
-      ordJson.status = computedStatus;
-      return ordJson;
-    }).filter((ord) => !status || ord.status === status);
+    // Unified status & financial totals calculation using OrderService helper
+    const updatedOrders = orders
+      .map((ord) => {
+        const ordJson = ord.toJSON() as any;
+        const calc = OrderService.computeDerivedStatus(ordJson);
+        Object.assign(ordJson, calc);
+        return ordJson;
+      })
+      .filter((ord) => !status || ord.status === status);
 
     const totalItems = updatedOrders.length;
     const pageNum = page ? parseInt(page as string, 10) : 1;

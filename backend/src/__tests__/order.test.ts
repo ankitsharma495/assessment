@@ -6,25 +6,44 @@ describe("Orders and Settlements API Requirements", () => {
   let authToken: string;
   let userId: number;
   let createdOrderId: number;
+  let secondUserToken: string;
 
   beforeAll(async () => {
     process.env.NODE_ENV = "test";
     await sequelize.sync({ force: true });
 
-    // Register a test user
+    // Register a primary test user
     const signupRes = await request(app).post("/api/auth/signup").send({
       name: "Test Merchant",
       email: "merchant@test.com",
       password: "password123",
-      role: "user",
+      role: "admin", // Attacker trying to escalate privilege
     });
 
     authToken = signupRes.body.data.token;
     userId = signupRes.body.data.user.id;
+
+    // Register a second merchant user
+    const user2Res = await request(app).post("/api/auth/signup").send({
+      name: "Other Merchant",
+      email: "merchant2@test.com",
+      password: "password123",
+    });
+
+    secondUserToken = user2Res.body.data.token;
   });
 
   afterAll(async () => {
     await sequelize.close();
+  });
+
+  test("Security: Signup ignores client role and assigns 'user'", async () => {
+    const meRes = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${authToken}`);
+
+    expect(meRes.status).toBe(200);
+    expect(meRes.body.data.role).toBe("user");
   });
 
   test("1. Create an order (2 x $500 = $1,000 total, due in 7 days)", async () => {
@@ -56,6 +75,14 @@ describe("Orders and Settlements API Requirements", () => {
     expect(res.body.data.status).toBe("pending");
 
     createdOrderId = res.body.data.id;
+  });
+
+  test("Data Isolation: Non-admin user cannot access another user's order", async () => {
+    const res = await request(app)
+      .get(`/api/orders/${createdOrderId}`)
+      .set("Authorization", `Bearer ${secondUserToken}`);
+
+    expect([403, 404]).toContain(res.status);
   });
 
   test("2. Record payment of $400 -> status should be partially_paid, amount due $600", async () => {
@@ -136,5 +163,68 @@ describe("Orders and Settlements API Requirements", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data.status).toBe("overdue");
+  });
+
+  test("Status Consistency: List view and detail view status match identically", async () => {
+    const listRes = await request(app)
+      .get("/api/orders")
+      .set("Authorization", `Bearer ${authToken}`);
+
+    expect(listRes.status).toBe(200);
+    const targetOrderFromList = listRes.body.data.find(
+      (o: any) => o.id === createdOrderId
+    );
+
+    const detailRes = await request(app)
+      .get(`/api/orders/${createdOrderId}`)
+      .set("Authorization", `Bearer ${authToken}`);
+
+    expect(detailRes.status).toBe(200);
+
+    expect(targetOrderFromList.status).toBe(detailRes.body.data.status);
+    expect(targetOrderFromList.totalAmount).toBe(detailRes.body.data.totalAmount);
+    expect(targetOrderFromList.totalPaid).toBe(detailRes.body.data.totalPaid);
+    expect(targetOrderFromList.balanceDue).toBe(detailRes.body.data.balanceDue);
+  });
+
+  test("Concurrency: Parallel payment requests do not exceed order total amount", async () => {
+    // Create a new order of $1000
+    const createRes = await request(app)
+      .post("/api/orders")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        customerName: "Concurrent Payment Customer",
+        dueDate: "2030-01-01",
+        items: [{ description: "Item 1", quantity: 1, unitPrice: 1000 }],
+      });
+
+    const orderId = createRes.body.data.id;
+
+    // Fire 2 concurrent payment requests of $600 each
+    const req1 = request(app)
+      .post(`/api/orders/${orderId}/payments`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ amount: 600, paymentDate: "2030-01-01" });
+
+    const req2 = request(app)
+      .post(`/api/orders/${orderId}/payments`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ amount: 600, paymentDate: "2030-01-01" });
+
+    const results = await Promise.all([req1, req2]);
+    const statuses = results.map((r) => r.status);
+
+    // Exactly one should succeed (201) and one should fail (400)
+    expect(statuses).toContain(201);
+    expect(statuses).toContain(400);
+
+    // Check final order balance
+    const finalOrderRes = await request(app)
+      .get(`/api/orders/${orderId}`)
+      .set("Authorization", `Bearer ${authToken}`);
+
+    expect(finalOrderRes.body.data.totalPaid).toBe(600);
+    expect(finalOrderRes.body.data.balanceDue).toBe(400);
+    expect(finalOrderRes.body.data.totalPaid).toBeLessThanOrEqual(1000);
   });
 });

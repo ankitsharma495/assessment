@@ -25,7 +25,7 @@ api.interceptors.request.use((config) => {
 });
 
 export const authAPI = {
-  signup: async (data: { name: string; email: string; password: string; role?: "admin" | "user" }) => {
+  signup: async (data: { name: string; email: string; password: string }) => {
     const res = await api.post("/auth/signup", data);
     return res.data;
   },

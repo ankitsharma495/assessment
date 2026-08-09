@@ -6,7 +6,7 @@ import { AuthRequest } from "../middleware/auth";
 
 export const signup = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({
@@ -26,13 +26,11 @@ export const signup = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const assignedRole = role === "admin" ? "admin" : "user";
-
     const user = await User.create({
       name,
       email,
       passwordHash,
-      role: assignedRole,
+      role: "user",
     });
 
     const secret = process.env.JWT_SECRET || "super-secret-key";
