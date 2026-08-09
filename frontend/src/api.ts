@@ -1,7 +1,16 @@
 import axios from "axios";
 import { Order, OrderStatus } from "./types";
 
-const API_BASE_URL = "/api";
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    const trimmed = envUrl.trim().replace(/\/+$/, "");
+    return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
+  }
+  return "/api";
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
