@@ -1,5 +1,6 @@
 import { Sequelize } from "sequelize-typescript";
 import dotenv from "dotenv";
+import pg from "pg";
 import { User } from "../models/User";
 import { Order } from "../models/Order";
 import { OrderItem } from "../models/OrderItem";
@@ -26,6 +27,7 @@ const databaseUrl = isTest ? undefined : (process.env.DATABASE_URL || process.en
 export const sequelize = databaseUrl
   ? new Sequelize(databaseUrl, {
       dialect: "postgres",
+      dialectModule: pg,
       logging: false,
       dialectOptions: {
         ssl: {
