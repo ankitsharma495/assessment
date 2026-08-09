@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Order, OrderStatus } from "../types";
+import { Order, OrderStatus, User } from "../types";
 import { OrderList } from "./OrderList";
 import {
   TrendingUp,

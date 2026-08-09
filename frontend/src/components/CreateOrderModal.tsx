@@ -489,7 +489,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             <div
               style={{
                 display: "flex",
-                justify: "space-between",
+                justifyContent: "space-between",
                 fontSize: "0.95rem",
                 fontWeight: "600",
                 color: "#1e293b",
