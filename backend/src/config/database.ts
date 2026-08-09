@@ -1,8 +1,24 @@
 import { Sequelize } from "sequelize-typescript";
-import path from "path";
 import dotenv from "dotenv";
+import { User } from "../models/User";
+import { Order } from "../models/Order";
+import { OrderItem } from "../models/OrderItem";
+import { Payment } from "../models/Payment";
+import { CreditNote } from "../models/CreditNote";
+import { OrderAdditionalCharge } from "../models/OrderAdditionalCharge";
+import { OrderAuditLog } from "../models/OrderAuditLog";
 
 dotenv.config();
+
+const models = [
+  User,
+  Order,
+  OrderItem,
+  Payment,
+  CreditNote,
+  OrderAdditionalCharge,
+  OrderAuditLog,
+];
 
 const isTest = process.env.NODE_ENV === "test";
 const databaseUrl = isTest ? undefined : (process.env.DATABASE_URL || process.env.NEON_DATABASE_URL);
@@ -17,19 +33,23 @@ export const sequelize = databaseUrl
           rejectUnauthorized: false, // Required for Neon Postgres SSL connection
         },
       },
-      models: [path.join(__dirname, "../models")],
+      models,
     })
   : new Sequelize({
       dialect: "sqlite",
       storage: process.env.DB_STORAGE || "./database.sqlite",
       logging: false,
-      models: [path.join(__dirname, "../models")],
+      models,
     });
 
+let isConnected = false;
+
 export const connectDB = async () => {
+  if (isConnected) return;
   try {
     await sequelize.authenticate();
     await sequelize.sync();
+    isConnected = true;
 
     // Auto-migration helper for Neon PostgreSQL / SQLite
     try {

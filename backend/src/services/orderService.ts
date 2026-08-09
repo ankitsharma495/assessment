@@ -199,7 +199,7 @@ export class OrderService {
       throw new Error(
         `Payment amount of $${requestedAmount.toFixed(
           2
-        )} exceeds the maximum allowed amount of $${currentBalanceDue.toFixed(2)}.`
+        )} exceeds remaining balance of $${currentBalanceDue.toFixed(2)}.`
       );
     }
 
