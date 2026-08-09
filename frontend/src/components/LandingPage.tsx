@@ -170,7 +170,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
         <div
           style={{
             display: "flex",
-            justify: "center",
+            justifyContent: "center",
             gap: "36px",
             marginTop: "48px",
             paddingTop: "24px",

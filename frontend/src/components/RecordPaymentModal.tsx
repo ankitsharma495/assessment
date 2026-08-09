@@ -120,7 +120,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               borderRadius: "8px",
               marginBottom: "20px",
               display: "flex",
-              justify: "space-between",
+              justifyContent: "space-between",
               alignItems: "center",
             }}
           >

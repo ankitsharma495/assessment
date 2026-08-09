@@ -360,7 +360,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                           key={p.id}
                           style={{
                             display: "flex",
-                            justify: "space-between",
+                            justifyContent: "space-between",
                             alignItems: "center",
                             background: "#f0fdf4",
                             border: "1px solid #bbf7d0",
@@ -433,7 +433,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                           key={cn.id}
                           style={{
                             display: "flex",
-                            justify: "space-between",
+                            justifyContent: "space-between",
                             alignItems: "center",
                             background: "#f3e8ff",
                             border: "1px solid #e9d5ff",
