@@ -198,15 +198,21 @@ export class OrderService {
     }
   ): Promise<{ payment: Payment; order: Order }> {
     return await sequelize.transaction(async (t) => {
-      const order = await Order.findByPk(orderId, {
-        include: [OrderItem, OrderAdditionalCharge, Payment, CreditNote],
+      // 1. Lock the primary Order row without joins (prevents PostgreSQL outer join FOR UPDATE error)
+      const lockedOrder = await Order.findByPk(orderId, {
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
 
-      if (!order) {
+      if (!lockedOrder) {
         throw new Error(`Order with ID ${orderId} not found.`);
       }
+
+      // 2. Fetch full order with inclusions inside the same locked transaction
+      const order = (await Order.findByPk(orderId, {
+        include: [OrderItem, OrderAdditionalCharge, Payment, CreditNote],
+        transaction: t,
+      }))!;
 
       const calc = this.computeDerivedStatus(order);
       const currentBalanceDue = calc.balanceDue;
@@ -273,15 +279,21 @@ export class OrderService {
     }
   ): Promise<{ creditNote: CreditNote; order: Order }> {
     return await sequelize.transaction(async (t) => {
-      const order = await Order.findByPk(orderId, {
-        include: [Payment, CreditNote],
+      // 1. Lock the primary Order row without joins
+      const lockedOrder = await Order.findByPk(orderId, {
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
 
-      if (!order) {
+      if (!lockedOrder) {
         throw new Error(`Order with ID ${orderId} not found.`);
       }
+
+      // 2. Fetch full order with inclusions
+      const order = (await Order.findByPk(orderId, {
+        include: [Payment, CreditNote],
+        transaction: t,
+      }))!;
 
       const calc = this.computeDerivedStatus(order);
       const requestedAmount = Number(data.amount.toFixed(2));
@@ -340,11 +352,19 @@ export class OrderService {
     orderId: number
   ): Promise<Order> {
     return await sequelize.transaction(async (t) => {
-      const payment = await Payment.findOne({
-        where: { id: paymentId, orderId },
-        include: [{ model: Order }],
+      // 1. Lock the primary Order row without joins
+      const lockedOrder = await Order.findByPk(orderId, {
         transaction: t,
         lock: t.LOCK.UPDATE,
+      });
+
+      if (!lockedOrder) {
+        throw new Error(`Order with ID ${orderId} not found.`);
+      }
+
+      const payment = await Payment.findOne({
+        where: { id: paymentId, orderId },
+        transaction: t,
       });
 
       if (!payment) {
@@ -353,7 +373,7 @@ export class OrderService {
 
       const paymentNum = payment.paymentNumber;
       const paymentAmt = payment.amount;
-      const previousStatus = payment.order ? payment.order.status : undefined;
+      const previousStatus = lockedOrder.status;
 
       await payment.destroy({ transaction: t });
 
